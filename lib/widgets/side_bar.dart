@@ -43,6 +43,13 @@ class SideBar extends StatelessWidget {
               Navigator.pushNamed(context, '/points');
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.drive_eta),
+            title: const Text('Drivers'),
+            onTap: () {
+              Navigator.pushNamed(context, '/drivers');
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout),

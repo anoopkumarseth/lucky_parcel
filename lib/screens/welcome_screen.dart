@@ -5,9 +5,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import '../widgets/location_selector.dart';
-import '../widgets/map_view.dart';
 import '../widgets/side_bar.dart';
 import '../widgets/top_nav.dart';
+import '../widgets/vehicle_selection.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -24,7 +24,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   LatLng? _pickupLocation;
   LatLng? _dropLocation;
   final Set<Polyline> _polylines = {};
-  String? _distance;
+  String? _distanceText;
+  double _distanceValue = 0;
+  bool _isConfirmed = false;
+  Map<String, dynamic>? _selectedVehicle;
 
   void _onLocationSelected(Map<String, dynamic> locationData) async {
     final placeId = locationData['place_id'];
@@ -82,7 +85,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         if (data['status'] == 'OK') {
           final routes = data['routes'] as List;
           final overviewPolyline = routes[0]['overview_polyline']['points'];
-          final distance = routes[0]['legs'][0]['distance']['text'];
+          final distanceText = routes[0]['legs'][0]['distance']['text'];
+          final distanceValue = routes[0]['legs'][0]['distance']['value'];
 
           final polylinePoints = PolylinePoints();
           final polylineCoordinates = polylinePoints
@@ -91,7 +95,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               .toList();
 
           setState(() {
-            _distance = distance;
+            _distanceText = distanceText;
+            _distanceValue = distanceValue / 1000.0; // Convert to km
             _polylines.add(Polyline(
               polylineId: const PolylineId('route'),
               color: Colors.blue,
@@ -135,6 +140,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
   }
 
+  void _reset() {
+    setState(() {
+      _pickupLocation = null;
+      _dropLocation = null;
+      _polylines.clear();
+      _distanceText = null;
+      _distanceValue = 0;
+      _isConfirmed = false;
+      _selectedVehicle = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,13 +163,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              LocationSelector(onLocationSelected: _onLocationSelected),
+              if (!_isConfirmed) LocationSelector(onLocationSelected: _onLocationSelected),
               const SizedBox(height: 20),
               if (_pickupLocation != null && _dropLocation != null)
                 Column(
                   children: [
-                    SizedBox(
-                      height: 300,
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      height: _isConfirmed ? 150 : 300, // Animate height change
                       child: GoogleMap(
                         onMapCreated: (controller) => _mapController = controller,
                         initialCameraPosition: CameraPosition(
@@ -166,18 +184,51 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         polylines: _polylines,
                       ),
                     ),
-                    if (_distance != null)
+                    if (_distanceText != null)
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Text('Distance: $_distance', style: const TextStyle(fontSize: 16)),
+                        child: Text('Distance: $_distanceText', style: const TextStyle(fontSize: 16)),
                       ),
                     const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Handle confirm logic
-                      },
-                      child: const Text('Confirm'),
-                    ),
+                    if (!_isConfirmed)
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _isConfirmed = true;
+                          });
+                        },
+                        child: const Text('Confirm'),
+                      ),
+                    if (_isConfirmed)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Select Vehicle:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          TextButton(
+                            onPressed: _reset,
+                            child: const Text('Modify Location'),
+                          ),
+                        ],
+                      ),
+                    if (_isConfirmed)
+                      VehicleSelection(
+                        distanceInKm: _distanceValue,
+                        onVehicleSelected: (vehicle) {
+                          setState(() {
+                            _selectedVehicle = vehicle;
+                          });
+                        },
+                      ),
+                    const SizedBox(height: 20),
+                    if (_isConfirmed)
+                      ElevatedButton(
+                        onPressed: _selectedVehicle != null
+                            ? () {
+                                // Handle booking logic
+                              }
+                            : null, // Button is disabled if no vehicle is selected
+                        child: const Text('Book Now'),
+                      ),
                   ],
                 ),
             ],

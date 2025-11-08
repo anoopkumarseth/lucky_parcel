@@ -6,6 +6,8 @@ import 'screens/welcome_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/points_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'screens/drivers_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -33,6 +35,8 @@ class MainApp extends StatelessWidget {
         '/profile': (context) => const ProfileScreen(),
         '/orders': (context) => const OrdersScreen(),
         '/points': (context) => const PointsScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
+        '/drivers': (context) => const DriversScreen(),
       },
     );
   }
