@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -10,12 +11,43 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _signUp() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? "An unknown error occurred."),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -47,14 +79,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
               obscureText: true,
             ),
             const SizedBox(height: 24.0),
-            ElevatedButton(
-              onPressed: () {
-                // Handle signup logic here (without Firebase)
-                print('Email: ${_emailController.text}');
-                print('Password: ${_passwordController.text}');
-              },
-              child: const Text('Sign Up'),
-            ),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: _signUp,
+                    child: const Text('Sign Up'),
+                  ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Go back to login screen
