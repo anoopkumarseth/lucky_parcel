@@ -13,7 +13,7 @@ class LocationSelector extends StatefulWidget {
 }
 
 class _LocationSelectorState extends State<LocationSelector> {
-  final String _apiKey = 'AIzaSyCwJ-S4S4sPnVdzbIuCfXo0UZ0TgZz5PwE';
+  final String _apiKey = 'AIzaSyCKVcmoBtJMFWHBRDF_TxvB5UCmW-w5rOg';
   final _pickupController = TextEditingController();
   final _dropController = TextEditingController();
   String _sessionToken = const Uuid().v4();
@@ -25,10 +25,25 @@ class _LocationSelectorState extends State<LocationSelector> {
       setState(() => _predictions = []);
       return;
     }
-    final response = await http.get(Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$_apiKey&sessiontoken=$_sessionToken&components=country:in'));
-    if (response.statusCode == 200) {
-      setState(() => _predictions = json.decode(response.body)['predictions']);
+
+    final uri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$_apiKey&sessiontoken=$_sessionToken&components=country:in');
+
+    try {
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          setState(() => _predictions = data['predictions']);
+        } else {
+          debugPrint('Google Places API Error: ${data["error_message"]}');
+        }
+      } else {
+        debugPrint('HTTP Error: ${response.statusCode} - ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching predictions: $e');
     }
   }
 
