@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -105,25 +109,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ));
           });
 
-          // Auto-zoom the map
           _mapController?.animateCamera(
             CameraUpdate.newLatLngBounds(
               LatLngBounds(
                 southwest: LatLng(
-                  _pickupLocation!.latitude < _dropLocation!.latitude
-                      ? _pickupLocation!.latitude
-                      : _dropLocation!.latitude,
-                  _pickupLocation!.longitude < _dropLocation!.longitude
-                      ? _pickupLocation!.longitude
-                      : _dropLocation!.longitude,
+                  _pickupLocation!.latitude < _dropLocation!.latitude ? _pickupLocation!.latitude : _dropLocation!.latitude,
+                  _pickupLocation!.longitude < _dropLocation!.longitude ? _pickupLocation!.longitude : _dropLocation!.longitude,
                 ),
                 northeast: LatLng(
-                  _pickupLocation!.latitude > _dropLocation!.latitude
-                      ? _pickupLocation!.latitude
-                      : _dropLocation!.latitude,
-                  _pickupLocation!.longitude > _dropLocation!.longitude
-                      ? _pickupLocation!.longitude
-                      : _dropLocation!.longitude,
+                  _pickupLocation!.latitude > _dropLocation!.latitude ? _pickupLocation!.latitude : _dropLocation!.latitude,
+                  _pickupLocation!.longitude > _dropLocation!.longitude ? _pickupLocation!.longitude : _dropLocation!.longitude,
                 ),
               ),
               50.0,
@@ -138,6 +133,73 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     } catch (e) {
       debugPrint('Error fetching directions: $e');
     }
+  }
+
+  Future<void> _bookParcel() async {
+    final driversSnapshot = await FirebaseFirestore.instance.collection('drivers').get();
+    DocumentSnapshot? nearestDriver;
+    double? minDistance;
+
+    for (var driverDoc in driversSnapshot.docs) {
+      final driverData = driverDoc.data();
+      final locationParts = driverData['location'].split(',');
+      if (locationParts.length == 2) {
+        final lat = double.tryParse(locationParts[0]);
+        final lng = double.tryParse(locationParts[1]);
+        if (lat != null && lng != null) {
+          final distance = Geolocator.distanceBetween(
+            _pickupLocation!.latitude,
+            _pickupLocation!.longitude,
+            lat,
+            lng,
+          );
+
+          if (minDistance == null || distance < minDistance) {
+            minDistance = distance;
+            nearestDriver = driverDoc;
+          }
+        }
+      }
+    }
+
+    if (nearestDriver == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No drivers available.')));
+      return;
+    }
+
+    final otp = (1000 + Random().nextInt(9000)).toString();
+
+    final orderData = {
+      'pickup': GeoPoint(_pickupLocation!.latitude, _pickupLocation!.longitude),
+      'dropoff': GeoPoint(_dropLocation!.latitude, _dropLocation!.longitude),
+      'distance': _distanceText,
+      'vehicle': _selectedVehicle,
+      'driverId': nearestDriver.id,
+      'driverName': nearestDriver['name'],
+      'otp': otp,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+      'userId': FirebaseAuth.instance.currentUser!.uid,
+    };
+
+    await FirebaseFirestore.instance.collection('orders').add(orderData);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Booking Confirmed!'),
+        content: Text('Driver ${nearestDriver!['name']} has been assigned.\nYour OTP is: $otp'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _reset();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _reset() {
@@ -170,7 +232,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      height: _isConfirmed ? 150 : 300, // Animate height change
+                      height: _isConfirmed ? 150 : 300,
                       child: GoogleMap(
                         onMapCreated: (controller) => _mapController = controller,
                         initialCameraPosition: CameraPosition(
@@ -192,11 +254,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     const SizedBox(height: 20),
                     if (!_isConfirmed)
                       ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _isConfirmed = true;
-                          });
-                        },
+                        onPressed: () => setState(() => _isConfirmed = true),
                         child: const Text('Confirm'),
                       ),
                     if (_isConfirmed)
@@ -204,29 +262,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Select Vehicle:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          TextButton(
-                            onPressed: _reset,
-                            child: const Text('Modify Location'),
-                          ),
+                          TextButton(onPressed: _reset, child: const Text('Modify Location')),
                         ],
                       ),
                     if (_isConfirmed)
                       VehicleSelection(
                         distanceInKm: _distanceValue,
-                        onVehicleSelected: (vehicle) {
-                          setState(() {
-                            _selectedVehicle = vehicle;
-                          });
-                        },
+                        onVehicleSelected: (vehicle) => setState(() => _selectedVehicle = vehicle),
                       ),
                     const SizedBox(height: 20),
                     if (_isConfirmed)
                       ElevatedButton(
-                        onPressed: _selectedVehicle != null
-                            ? () {
-                                // Handle booking logic
-                              }
-                            : null, // Button is disabled if no vehicle is selected
+                        onPressed: _selectedVehicle != null ? _bookParcel : null,
                         child: const Text('Book Now'),
                       ),
                   ],
