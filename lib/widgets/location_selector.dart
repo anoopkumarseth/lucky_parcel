@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -47,24 +48,89 @@ class _LocationSelectorState extends State<LocationSelector> {
     }
   }
 
+  Future<void> _getCurrentLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission is required to use this feature.')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permission Required'),
+            content: const Text('Location permission has been permanently denied. Please go to your app settings to enable it.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await Geolocator.openAppSettings();
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$_apiKey');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          final firstResult = data['results'][0];
+          _pickupController.text = firstResult['formatted_address'];
+          widget.onLocationSelected({
+            'isPickup': true,
+            'place_id': firstResult['place_id'],
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting current location: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        TextField(
+        TextFormField(
           controller: _pickupController,
-          decoration: const InputDecoration(labelText: 'Pickup Location'),
+          decoration: InputDecoration(
+            labelText: 'Pickup Location',
+            prefixIcon: const Icon(Icons.my_location),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.gps_fixed),
+              onPressed: _getCurrentLocation,
+            ),
+          ),
           onChanged: (value) {
             _isPickup = true;
             _getPredictions(value);
           },
         ),
+        const SizedBox(height: 16),
         TextField(
           controller: _dropController,
-          decoration: const InputDecoration(labelText: 'Drop Location'),
+          decoration: const InputDecoration(labelText: 'Drop Location', prefixIcon: Icon(Icons.location_on_outlined)),
           onChanged: (value) {
             _isPickup = false;
-            _getPredictions(value);
+            _getSuggestions(value);
           },
         ),
         if (_predictions.isNotEmpty)
@@ -93,5 +159,10 @@ class _LocationSelectorState extends State<LocationSelector> {
           ),
       ],
     );
+  }
+
+  // A small typo fix from the previous version
+  void _getSuggestions(String value) {
+    _getPredictions(value);
   }
 }

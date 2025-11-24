@@ -57,7 +57,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             } else {
               _dropLocation = LatLng(lat, lng);
             }
-            _sessionToken = const Uuid().v4(); // Reset session token
+            _sessionToken = const Uuid().v4();
 
             if (_pickupLocation != null && _dropLocation != null) {
               _getDirections();
@@ -82,10 +82,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     try {
       final response = await http.get(uri);
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
         if (data['status'] == 'OK') {
           final routes = data['routes'] as List;
           final overviewPolyline = routes[0]['overview_polyline']['points'];
@@ -100,10 +98,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
           setState(() {
             _distanceText = distanceText;
-            _distanceValue = distanceValue / 1000.0; // Convert to km
+            _distanceValue = distanceValue / 1000.0;
             _polylines.add(Polyline(
               polylineId: const PolylineId('route'),
-              color: Colors.blue,
+              color: Colors.blueAccent,
               width: 5,
               points: polylineCoordinates,
             ));
@@ -148,12 +146,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         final lng = double.tryParse(locationParts[1]);
         if (lat != null && lng != null) {
           final distance = Geolocator.distanceBetween(
-            _pickupLocation!.latitude,
-            _pickupLocation!.longitude,
-            lat,
-            lng,
-          );
-
+              _pickupLocation!.latitude, _pickupLocation!.longitude, lat, lng);
           if (minDistance == null || distance < minDistance) {
             minDistance = distance;
             nearestDriver = driverDoc;
@@ -169,7 +162,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     final otp = (1000 + Random().nextInt(9000)).toString();
 
-    final orderData = {
+    await FirebaseFirestore.instance.collection('orders').add({
       'pickup': GeoPoint(_pickupLocation!.latitude, _pickupLocation!.longitude),
       'dropoff': GeoPoint(_dropLocation!.latitude, _dropLocation!.longitude),
       'distance': _distanceText,
@@ -180,26 +173,34 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
       'userId': FirebaseAuth.instance.currentUser!.uid,
-    };
+    });
 
-    await FirebaseFirestore.instance.collection('orders').add(orderData);
-
-    showDialog(
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Booking Confirmed!'),
         content: Text('Driver ${nearestDriver!['name']} has been assigned.\nYour OTP is: $otp'),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _reset();
-            },
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
           ),
         ],
       ),
     );
+    
+    Navigator.pushNamed(context, '/orders');
+    _reset();
+  }
+
+  void _repeatRide(GeoPoint pickup, GeoPoint drop) {
+    setState(() {
+      _pickupLocation = LatLng(pickup.latitude, pickup.longitude);
+      _dropLocation = LatLng(drop.latitude, drop.longitude);
+      if (_pickupLocation != null && _dropLocation != null) {
+        _getDirections();
+      }
+    });
   }
 
   void _reset() {
@@ -216,72 +217,172 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasFullRoute = _pickupLocation != null && _dropLocation != null;
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: TopNav(scaffoldKey: _scaffoldKey),
       drawer: const SideBar(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              if (!_isConfirmed) LocationSelector(onLocationSelected: _onLocationSelected),
-              const SizedBox(height: 20),
-              if (_pickupLocation != null && _dropLocation != null)
-                Column(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      height: _isConfirmed ? 150 : 300,
-                      child: GoogleMap(
-                        onMapCreated: (controller) => _mapController = controller,
-                        initialCameraPosition: CameraPosition(
-                          target: _pickupLocation!,
-                          zoom: 12,
-                        ),
-                        markers: {
-                          Marker(markerId: const MarkerId('pickup'), position: _pickupLocation!),
-                          Marker(markerId: const MarkerId('drop'), position: _dropLocation!),
-                        },
-                        polylines: _polylines,
-                      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          // Show location selector if we DON'T have a full route yet
+          if (!hasFullRoute)
+            Column(
+              children: [
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Where to?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        LocationSelector(onLocationSelected: _onLocationSelected),
+                      ],
                     ),
-                    if (_distanceText != null)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text('Distance: $_distanceText', style: const TextStyle(fontSize: 16)),
+                  ),
+                ),
+                // Only show recent rides if the user hasn't started selecting ANY location
+                if (_pickupLocation == null && _dropLocation == null)
+                  RecentRides(onRideSelected: _repeatRide),
+              ],
+            ),
+
+          // Show the map and booking flow once we HAVE a full route
+          if (hasFullRoute)
+            Column(
+              children: [
+                Card(
+                  elevation: 4,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: _isConfirmed ? 180 : 300,
+                        child: GoogleMap(
+                          onMapCreated: (controller) => _mapController = controller,
+                          initialCameraPosition: CameraPosition(
+                            target: _pickupLocation!,
+                            zoom: 12,
+                          ),
+                          markers: {
+                            Marker(markerId: const MarkerId('pickup'), position: _pickupLocation!),
+                            Marker(markerId: const MarkerId('drop'), position: _dropLocation!),
+                          },
+                          polylines: _polylines,
+                        ),
                       ),
-                    const SizedBox(height: 20),
-                    if (!_isConfirmed)
-                      ElevatedButton(
-                        onPressed: () => setState(() => _isConfirmed = true),
-                        child: const Text('Confirm'),
-                      ),
-                    if (_isConfirmed)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      if (_distanceText != null)
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Text('Distance: $_distanceText', style: Theme.of(context).textTheme.titleMedium),
+                              TextButton(onPressed: _reset, child: const Text('Change')),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (_isConfirmed)
+                  Card(
+                    margin: const EdgeInsets.only(top: 20),
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
                         children: [
-                          const Text('Select Vehicle:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          TextButton(onPressed: _reset, child: const Text('Modify Location')),
+                          Text('Select Vehicle', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 10),
+                          VehicleSelection(
+                            distanceInKm: _distanceValue,
+                            onVehicleSelected: (vehicle) => setState(() => _selectedVehicle = vehicle),
+                          ),
                         ],
                       ),
-                    if (_isConfirmed)
-                      VehicleSelection(
-                        distanceInKm: _distanceValue,
-                        onVehicleSelected: (vehicle) => setState(() => _selectedVehicle = vehicle),
-                      ),
-                    const SizedBox(height: 20),
-                    if (_isConfirmed)
-                      ElevatedButton(
-                        onPressed: _selectedVehicle != null ? _bookParcel : null,
-                        child: const Text('Book Now'),
-                      ),
-                  ],
-                ),
-            ],
-          ),
-        ),
+                    ),
+                  ),
+              ],
+            ),
+        ],
       ),
+      floatingActionButton: hasFullRoute
+          ? FloatingActionButton.extended(
+              onPressed: _isConfirmed
+                  ? (_selectedVehicle != null ? _bookParcel : null)
+                  : () => setState(() => _isConfirmed = true),
+              label: Text(_isConfirmed ? 'Book Now' : 'Confirm'),
+              icon: Icon(_isConfirmed ? Icons.check : Icons.arrow_forward),
+            )
+          : null,
+    );
+  }
+}
+
+class RecentRides extends StatelessWidget {
+  final Function(GeoPoint, GeoPoint) onRideSelected;
+  const RecentRides({super.key, required this.onRideSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Text('Repeat Recent', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        ),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('orders')
+              .where('userId', isEqualTo: userId)
+              .orderBy('createdAt', descending: true)
+              .limit(5)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(child: Text('Something went wrong'));
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text('No recent rides to show.')));
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                final order = snapshot.data!.docs[index];
+                final pickup = order['pickup'] as GeoPoint;
+                final dropoff = order['dropoff'] as GeoPoint;
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  child: ListTile(
+                    leading: const Icon(Icons.history, color: Colors.grey),
+                    title: Text('To: ${order['driverName']}'),
+                    subtitle: Text('From: Lat ${pickup.latitude.toStringAsFixed(2)}, Lng ${pickup.longitude.toStringAsFixed(2)}'),
+                    onTap: () => onRideSelected(pickup, dropoff),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 }

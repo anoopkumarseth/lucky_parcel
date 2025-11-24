@@ -12,46 +12,36 @@ class SideBar extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          const DrawerHeader(
+          UserAccountsDrawerHeader(
+            accountName: Text(user?.displayName ?? 'Anonymous'),
+            accountEmail: Text(user?.email ?? ''),
+            currentAccountPicture: CircleAvatar(
+              child: Text(user?.email?[0].toUpperCase() ?? 'A'),
+            ),
             decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
-            child: Text(
-              'ParcelApp',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-              ),
+              color: Theme.of(context).primaryColor,
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.person),
+            leading: const Icon(Icons.person_outline),
             title: const Text('Profile'),
-            onTap: () {
-              Navigator.pushNamed(context, '/profile');
-            },
+            onTap: () => Navigator.pushNamed(context, '/profile'),
           ),
           ListTile(
-            leading: const Icon(Icons.shopping_bag),
+            leading: const Icon(Icons.receipt_long_outlined),
             title: const Text('My Orders'),
-            onTap: () {
-              Navigator.pushNamed(context, '/orders');
-            },
+            onTap: () => Navigator.pushNamed(context, '/orders'),
           ),
           ListTile(
-            leading: const Icon(Icons.star),
+            leading: const Icon(Icons.star_border),
             title: const Text('My Points'),
-            onTap: () {
-              Navigator.pushNamed(context, '/points');
-            },
+            onTap: () => Navigator.pushNamed(context, '/points'),
           ),
           if (user != null && user.email == 'test@gmail.com')
             ListTile(
-              leading: const Icon(Icons.drive_eta),
+              leading: const Icon(Icons.drive_eta_outlined),
               title: const Text('Drivers'),
-              onTap: () {
-                Navigator.pushNamed(context, '/drivers');
-              },
+              onTap: () => Navigator.pushNamed(context, '/drivers'),
             ),
           const Divider(),
           ListTile(
@@ -59,7 +49,7 @@ class SideBar extends StatelessWidget {
             title: const Text('Logout'),
             onTap: () async {
               await FirebaseAuth.instance.signOut();
-              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              // The AuthWrapper will handle navigation
             },
           ),
         ],

@@ -34,7 +34,7 @@ class _DriversScreenState extends State<DriversScreen> {
         actions: [
           if (_isListVisible)
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_circle_outline),
               onPressed: () => _showForm(),
             ),
         ],
@@ -60,12 +60,11 @@ class _DriverListState extends State<DriverList> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(16.0),
           child: TextField(
             decoration: const InputDecoration(
-              labelText: 'Search Drivers',
+              labelText: 'Search by Name',
               prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
             ),
             onChanged: (value) => setState(() => _searchQuery = value),
           ),
@@ -74,7 +73,7 @@ class _DriverListState extends State<DriverList> {
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('drivers').snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.hasError) return const Text('Something went wrong');
+              if (snapshot.hasError) return const Center(child: Text('Something went wrong'));
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -90,13 +89,19 @@ class _DriverListState extends State<DriverList> {
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final driver = docs[index];
-                  return ListTile(
-                    onTap: () => widget.onEdit(driver),
-                    leading: CircleAvatar(
-                      child: Text(driver['name'].trim().split(' ').map((l) => l[0]).take(2).join()),
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    child: ListTile(
+                      onTap: () => widget.onEdit(driver),
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        child: Text(driver['name'].trim().split(' ').map((l) => l[0]).take(2).join()),
+                      ),
+                      title: Text(driver['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(driver['vehicleType'] ?? ''),
+                      trailing: const Icon(Icons.edit_outlined),
                     ),
-                    title: Text(driver['name']),
-                    subtitle: Text(driver['vehicleType'] ?? ''),
                   );
                 },
               );
@@ -163,7 +168,7 @@ class _DriverFormState extends State<DriverForm> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Driver saved successfully!')),
+      SnackBar(content: Text('Driver saved successfully!'), backgroundColor: Colors.green),
     );
 
     widget.onFormClose();
@@ -171,36 +176,42 @@ class _DriverFormState extends State<DriverForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name'), validator: (v) => v!.isEmpty ? 'Required' : null),
-            TextFormField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Phone'), keyboardType: TextInputType.phone, validator: (v) => v!.isEmpty ? 'Required' : null),
-            TextFormField(controller: _locationController, decoration: const InputDecoration(labelText: 'Current Location (Lat, Lng)')),
-            TextFormField(controller: _vehicleNumController, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-            DropdownButtonFormField<String>(
-              value: _selectedVehicleType,
-              decoration: const InputDecoration(labelText: 'Vehicle Type'),
-              items: _vehicleTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-              onChanged: (v) => setState(() => _selectedVehicleType = v),
-              validator: (v) => v == null ? 'Required' : null,
-            ),
-            DropdownButtonFormField<String>(
-              value: _selectedCapacity,
-              decoration: const InputDecoration(labelText: 'Vehicle Capacity'),
-              items: _capacities.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-              onChanged: (v) => setState(() => _selectedCapacity = v),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline)), validator: (v) => v!.isEmpty ? 'Required' : null),
+          const SizedBox(height: 16),
+          TextFormField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Phone', prefixIcon: Icon(Icons.phone_outlined)), keyboardType: TextInputType.phone, validator: (v) => v!.isEmpty ? 'Required' : null),
+          const SizedBox(height: 16),
+          TextFormField(controller: _locationController, decoration: const InputDecoration(labelText: 'Current Location (Lat,Lng)', prefixIcon: Icon(Icons.location_on_outlined))),
+          const SizedBox(height: 16),
+          TextFormField(controller: _vehicleNumController, decoration: const InputDecoration(labelText: 'Vehicle Number', prefixIcon: Icon(Icons.pin_outlined))),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _selectedVehicleType,
+            decoration: const InputDecoration(labelText: 'Vehicle Type', prefixIcon: Icon(Icons.local_shipping_outlined)),
+            items: _vehicleTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+            onChanged: (v) => setState(() => _selectedVehicleType = v),
+            validator: (v) => v == null ? 'Required' : null,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _selectedCapacity,
+            decoration: const InputDecoration(labelText: 'Vehicle Capacity', prefixIcon: Icon(Icons.scale_outlined)),
+            items: _capacities.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+            onChanged: (v) => setState(() => _selectedCapacity = v),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
               onPressed: _saveDriver,
               child: Text(widget.driver == null ? 'Register Driver' : 'Save Changes'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

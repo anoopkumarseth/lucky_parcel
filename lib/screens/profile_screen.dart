@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -7,7 +7,6 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final userName = user?.displayName ?? user?.email ?? 'User';
 
     return Scaffold(
       appBar: AppBar(
@@ -15,13 +14,31 @@ class ProfileScreen extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name: $userName', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 10),
-            Text('Email: ${user?.email ?? 'N/A'}', style: const TextStyle(fontSize: 18)),
-          ],
+        child: Card(
+          elevation: 4,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.email_outlined),
+                  title: const Text('Email'),
+                  subtitle: Text(user?.email ?? 'Not available'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.person_outline),
+                  title: const Text('Display Name'),
+                  subtitle: Text(user?.displayName ?? 'Not set'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.verified_user_outlined),
+                  title: const Text('User ID'),
+                  subtitle: Text(user?.uid ?? 'Not available'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
