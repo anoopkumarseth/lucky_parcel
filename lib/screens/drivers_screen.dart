@@ -190,7 +190,7 @@ class _DriverFormState extends State<DriverForm> {
           TextFormField(controller: _vehicleNumController, decoration: const InputDecoration(labelText: 'Vehicle Number', prefixIcon: Icon(Icons.pin_outlined))),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedVehicleType,
+            initialValue: _selectedVehicleType,
             decoration: const InputDecoration(labelText: 'Vehicle Type', prefixIcon: Icon(Icons.local_shipping_outlined)),
             items: _vehicleTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
             onChanged: (v) => setState(() => _selectedVehicleType = v),
@@ -198,7 +198,7 @@ class _DriverFormState extends State<DriverForm> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedCapacity,
+            initialValue: _selectedCapacity,
             decoration: const InputDecoration(labelText: 'Vehicle Capacity', prefixIcon: Icon(Icons.scale_outlined)),
             items: _capacities.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
             onChanged: (v) => setState(() => _selectedCapacity = v),

@@ -7,11 +7,11 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:lucky_parcel/common/widgets/side_bar.dart';
+import 'package:lucky_parcel/common/widgets/top_nav.dart';
+import 'package:lucky_parcel/features/home/widgets/location_selector.dart';
+import 'package:lucky_parcel/features/home/widgets/vehicle_selection.dart';
 import 'package:uuid/uuid.dart';
-import '../widgets/location_selector.dart';
-import '../widgets/side_bar.dart';
-import '../widgets/top_nav.dart';
-import '../widgets/vehicle_selection.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -223,95 +223,103 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       key: _scaffoldKey,
       appBar: TopNav(scaffoldKey: _scaffoldKey),
       drawer: const SideBar(),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // Show location selector if we DON'T have a full route yet
-          if (!hasFullRoute)
-            Column(
-              children: [
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Where to?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 10),
-                        LocationSelector(onLocationSelected: _onLocationSelected),
-                      ],
-                    ),
-                  ),
-                ),
-                // Only show recent rides if the user hasn't started selecting ANY location
-                if (_pickupLocation == null && _dropLocation == null)
-                  RecentRides(onRideSelected: _repeatRide),
-              ],
-            ),
-
-          // Show the map and booking flow once we HAVE a full route
-          if (hasFullRoute)
-            Column(
-              children: [
-                Card(
-                  elevation: 4,
-                  clipBehavior: Clip.antiAlias,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: _isConfirmed ? 180 : 300,
-                        child: GoogleMap(
-                          onMapCreated: (controller) => _mapController = controller,
-                          initialCameraPosition: CameraPosition(
-                            target: _pickupLocation!,
-                            zoom: 12,
-                          ),
-                          markers: {
-                            Marker(markerId: const MarkerId('pickup'), position: _pickupLocation!),
-                            Marker(markerId: const MarkerId('drop'), position: _dropLocation!),
-                          },
-                          polylines: _polylines,
-                        ),
-                      ),
-                      if (_distanceText != null)
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Text('Distance: $_distanceText', style: Theme.of(context).textTheme.titleMedium),
-                              TextButton(onPressed: _reset, child: const Text('Change')),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (_isConfirmed)
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.topRight,
+            radius: 3,
+            colors: [
+              Color(0xFFE3F2FD),
+              Color(0xFFFFFFFF),
+            ],
+          ),
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            if (!hasFullRoute)
+              Column(
+                children: [
                   Card(
-                    margin: const EdgeInsets.only(top: 20),
                     elevation: 4,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Select Vehicle', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                          Text('Where to?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 10),
-                          VehicleSelection(
-                            distanceInKm: _distanceValue,
-                            onVehicleSelected: (vehicle) => setState(() => _selectedVehicle = vehicle),
-                          ),
+                          LocationSelector(onLocationSelected: _onLocationSelected),
                         ],
                       ),
                     ),
                   ),
-              ],
-            ),
-        ],
+                  if (_pickupLocation == null && _dropLocation == null)
+                    RecentRides(onRideSelected: _repeatRide),
+                ],
+              ),
+            if (hasFullRoute)
+              Column(
+                children: [
+                  Card(
+                    elevation: 4,
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: _isConfirmed ? 180 : 300,
+                          child: GoogleMap(
+                            onMapCreated: (controller) => _mapController = controller,
+                            initialCameraPosition: CameraPosition(
+                              target: _pickupLocation!,
+                              zoom: 12,
+                            ),
+                            markers: {
+                              Marker(markerId: const MarkerId('pickup'), position: _pickupLocation!),
+                              Marker(markerId: const MarkerId('drop'), position: _dropLocation!),
+                            },
+                            polylines: _polylines,
+                          ),
+                        ),
+                        if (_distanceText != null)
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                Text('Distance: $_distanceText', style: Theme.of(context).textTheme.titleMedium),
+                                TextButton(onPressed: _reset, child: const Text('Change')),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (_isConfirmed)
+                    Card(
+                      margin: const EdgeInsets.only(top: 20),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Text('Select Vehicle', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 10),
+                            VehicleSelection(
+                              distanceInKm: _distanceValue,
+                              onVehicleSelected: (vehicle) => setState(() => _selectedVehicle = vehicle),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
       floatingActionButton: hasFullRoute
           ? FloatingActionButton.extended(

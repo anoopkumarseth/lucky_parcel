@@ -22,14 +22,24 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(48.0),
-          child: SvgPicture.asset(
-            'assets/images/LuckyParcel_logo.svg',
-            height: 250,
-            width: 250,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.topRight,
+            radius: 3,
+            colors: [
+              Color(0xFFE3F2FD),
+              Color(0xFFFFFFFF),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(48.0),
+            child: SvgPicture.asset(
+              'assets/images/LuckyParcel_logo.svg',
+              width: 250,
+            ),
           ),
         ),
       ),

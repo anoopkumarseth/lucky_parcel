@@ -161,7 +161,6 @@ class _LocationSelectorState extends State<LocationSelector> {
     );
   }
 
-  // A small typo fix from the previous version
   void _getSuggestions(String value) {
     _getPredictions(value);
   }
