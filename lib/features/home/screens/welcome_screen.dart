@@ -4,9 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:lucky_parcel/common/widgets/gradient_background.dart';
 import 'package:lucky_parcel/common/widgets/side_bar.dart';
 import 'package:lucky_parcel/common/widgets/top_nav.dart';
 import 'package:lucky_parcel/features/home/widgets/location_selector.dart';
@@ -221,104 +223,80 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
+      extendBodyBehindAppBar: true,
       appBar: TopNav(scaffoldKey: _scaffoldKey),
       drawer: const SideBar(),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topRight,
-            radius: 3,
-            colors: [
-              Color(0xFFE3F2FD),
-              Color(0xFFFFFFFF),
-            ],
-          ),
-        ),
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            if (!hasFullRoute)
-              Column(
-                children: [
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+      body: GradientBackground(
+        child: SafeArea(
+          bottom: false,
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              if (!hasFullRoute)
+                LocationSelector(onLocationSelected: _onLocationSelected),
+              if (_pickupLocation == null && _dropLocation == null)
+                RecentRides(onRideSelected: _repeatRide),
+              if (hasFullRoute)
+                Column(
+                  children: [
+                    Card(
+                      elevation: 4,
+                      clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Where to?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 10),
-                          LocationSelector(onLocationSelected: _onLocationSelected),
+                          SizedBox(
+                            height: _isConfirmed ? 180 : 300,
+                            child: GoogleMap(
+                              onMapCreated: (controller) => _mapController = controller,
+                              initialCameraPosition: CameraPosition(
+                                target: _pickupLocation!,
+                                zoom: 12,
+                              ),
+                              markers: {
+                                Marker(markerId: const MarkerId('pickup'), position: _pickupLocation!),
+                                Marker(markerId: const MarkerId('drop'), position: _dropLocation!),
+                              },
+                              polylines: _polylines,
+                            ),
+                          ),
+                          if (_distanceText != null)
+                            Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  Text('Distance: $_distanceText', style: Theme.of(context).textTheme.titleMedium),
+                                  TextButton(onPressed: _reset, child: const Text('Change')),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                  ),
-                  if (_pickupLocation == null && _dropLocation == null)
-                    RecentRides(onRideSelected: _repeatRide),
-                ],
-              ),
-            if (hasFullRoute)
-              Column(
-                children: [
-                  Card(
-                    elevation: 4,
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: _isConfirmed ? 180 : 300,
-                          child: GoogleMap(
-                            onMapCreated: (controller) => _mapController = controller,
-                            initialCameraPosition: CameraPosition(
-                              target: _pickupLocation!,
-                              zoom: 12,
-                            ),
-                            markers: {
-                              Marker(markerId: const MarkerId('pickup'), position: _pickupLocation!),
-                              Marker(markerId: const MarkerId('drop'), position: _dropLocation!),
-                            },
-                            polylines: _polylines,
+                    if (_isConfirmed)
+                      Card(
+                        margin: const EdgeInsets.only(top: 20),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              Text('Select Vehicle', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 10),
+                              VehicleSelection(
+                                distanceInKm: _distanceValue,
+                                onVehicleSelected: (vehicle) => setState(() => _selectedVehicle = vehicle),
+                              ),
+                            ],
                           ),
-                        ),
-                        if (_distanceText != null)
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                Text('Distance: $_distanceText', style: Theme.of(context).textTheme.titleMedium),
-                                TextButton(onPressed: _reset, child: const Text('Change')),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (_isConfirmed)
-                    Card(
-                      margin: const EdgeInsets.only(top: 20),
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Text('Select Vehicle', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 10),
-                            VehicleSelection(
-                              distanceInKm: _distanceValue,
-                              onVehicleSelected: (vehicle) => setState(() => _selectedVehicle = vehicle),
-                            ),
-                          ],
                         ),
                       ),
-                    ),
-                ],
-              ),
-          ],
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: hasFullRoute
@@ -342,55 +320,136 @@ class RecentRides extends StatelessWidget {
   Widget build(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser!.uid;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text('Repeat Recent', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-        ),
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('orders')
-              .where('userId', isEqualTo: userId)
-              .orderBy('createdAt', descending: true)
-              .limit(5)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const Center(child: Text('Something went wrong'));
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text('No recent rides to show.')));
-            }
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .limit(5)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.data!.docs.length,
-              itemBuilder: (context, index) {
-                final order = snapshot.data!.docs[index];
-                final pickup = order['pickup'] as GeoPoint;
-                final dropoff = order['dropoff'] as GeoPoint;
-
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  child: ListTile(
-                    leading: const Icon(Icons.history, color: Colors.grey),
-                    title: Text('To: ${order['driverName']}'),
-                    subtitle: Text('From: Lat ${pickup.latitude.toStringAsFixed(2)}, Lng ${pickup.longitude.toStringAsFixed(2)}'),
-                    onTap: () => onRideSelected(pickup, dropoff),
-                  ),
-                );
-              },
-            );
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 24.0),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final order = snapshot.data!.docs[index];
+            return RecentRideTile(order: order, onSelected: onRideSelected);
           },
+        );
+      },
+    );
+  }
+}
+
+class RecentRideTile extends StatefulWidget {
+  final DocumentSnapshot order;
+  final Function(GeoPoint, GeoPoint) onSelected;
+  const RecentRideTile({super.key, required this.order, required this.onSelected});
+
+  @override
+  State<RecentRideTile> createState() => _RecentRideTileState();
+}
+
+class _RecentRideTileState extends State<RecentRideTile> {
+  String? _dropoffAddressMain;
+  String? _dropoffAddressSecondary;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAddresses();
+  }
+
+  Future<void> _fetchAddresses() async {
+    final dropoffPoint = widget.order['dropoff'] as GeoPoint;
+    final dropoffAddrParts = await _getGeocodedAddress(dropoffPoint);
+
+    if (mounted) {
+      setState(() {
+        _dropoffAddressMain = dropoffAddrParts[0];
+        _dropoffAddressSecondary = dropoffAddrParts[1];
+      });
+    }
+  }
+
+  Future<List<String>> _getGeocodedAddress(GeoPoint point) async {
+    final apiKey = 'AIzaSyCKVcmoBtJMFWHBRDF_TxvB5UCmW-w5rOg';
+    final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${point.latitude},${point.longitude}&key=$apiKey');
+    try {
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          final result = data['results'][0];
+          final components = result['address_components'] as List;
+          
+          String? mainText;
+          String? secondaryText;
+
+          for (var component in components) {
+            final types = component['types'] as List;
+            if (types.contains('sublocality_level_2') || types.contains('sublocality')) {
+              mainText = component['short_name'];
+              break;
+            }
+          }
+          mainText ??= result['formatted_address'].split(',')[0];
+
+          final fullAddress = result['formatted_address'] as String;
+          final parts = fullAddress.split(',');
+          if (parts.length > 1) {
+            secondaryText = parts.sublist(1).join(',').trim();
+          }
+          
+          return [mainText ?? '', secondaryText ?? ''];
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching address: $e');
+    }
+    return ['Lat ${point.latitude.toStringAsFixed(2)}', 'Lng ${point.longitude.toStringAsFixed(2)}'];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pickup = widget.order['pickup'] as GeoPoint;
+    final dropoff = widget.order['dropoff'] as GeoPoint;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0, left: 8.0, right: 8.0),
+      child: InkWell(
+        onTap: () => widget.onSelected(pickup, dropoff),
+        child: Row(
+          children: [
+            SvgPicture.asset('assets/icons/history.svg', width: 24, height: 24, colorFilter: ColorFilter.mode(Theme.of(context).primaryColor, BlendMode.srcIn)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _dropoffAddressMain ?? 'Loading...',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (_dropoffAddressSecondary != null && _dropoffAddressSecondary!.isNotEmpty)
+                    Text(
+                      _dropoffAddressSecondary!,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

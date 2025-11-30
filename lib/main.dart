@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:lucky_parcel/app/routes/app_router.dart';
 import 'package:lucky_parcel/app/theme/app_theme.dart';
-import 'package:lucky_parcel/features/auth/screens/login_screen.dart';
+import 'package:lucky_parcel/features/auth/screens/auth_screen.dart';
 import 'package:lucky_parcel/features/home/screens/welcome_screen.dart';
 import 'firebase_options.dart';
 
@@ -44,7 +44,7 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.hasData) {
           return const WelcomeScreen();
         }
-        return const LoginScreen();
+        return const AuthScreen();
       },
     );
   }

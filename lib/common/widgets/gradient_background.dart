@@ -25,7 +25,7 @@ class GradientBackground extends StatelessWidget {
           ),
         ),
         if (showBlobs) ...[
-          Positioned(top: 0, right: 0, child: SvgPicture.asset('assets/images/blobs/login/top-right.svg')),
+          Positioned(top: -10, right: -20, child: SvgPicture.asset('assets/images/blobs/login/top-right.svg')),
           Positioned(top: 0, left: 0, child: SvgPicture.asset('assets/images/blobs/login/top-left.svg')),
           Positioned(bottom: 0, left: 0, child: SvgPicture.asset('assets/images/blobs/login/bottom-left.svg')),
           Positioned(bottom: 0, right: 0, child: SvgPicture.asset('assets/images/blobs/login/bottom-right.svg')),

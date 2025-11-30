@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'colors.dart';
 
 class AppTheme {
@@ -11,8 +12,8 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.background,
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        systemOverlayStyle: SystemUiOverlayStyle.dark, // This makes status bar icons black
+        backgroundColor: Colors.transparent, // Make AppBar transparent
         elevation: 0,
       ),
       inputDecorationTheme: InputDecorationTheme(

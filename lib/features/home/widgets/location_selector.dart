@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:lucky_parcel/common/widgets/custom_text_field.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -107,30 +109,30 @@ class _LocationSelectorState extends State<LocationSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
     return Column(
       children: [
-        TextFormField(
+        CustomTextField(
           controller: _pickupController,
-          decoration: InputDecoration(
-            labelText: 'Pickup Location',
-            prefixIcon: const Icon(Icons.my_location),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.gps_fixed),
-              onPressed: _getCurrentLocation,
-            ),
+          labelText: 'Pickup Location',
+          prefixIcon: SvgPicture.asset('assets/icons/location-pin.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
+          suffixIcon: IconButton(
+            icon: SvgPicture.asset('assets/icons/location-select.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
+            onPressed: _getCurrentLocation,
           ),
           onChanged: (value) {
             _isPickup = true;
             _getPredictions(value);
           },
         ),
-        const SizedBox(height: 16),
-        TextField(
+        CustomTextField(
           controller: _dropController,
-          decoration: const InputDecoration(labelText: 'Drop Location', prefixIcon: Icon(Icons.location_on_outlined)),
+          labelText: 'Drop Location',
+          prefixIcon: SvgPicture.asset('assets/icons/location-pin.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
           onChanged: (value) {
             _isPickup = false;
-            _getSuggestions(value);
+            _getPredictions(value);
           },
         ),
         if (_predictions.isNotEmpty)
@@ -159,9 +161,5 @@ class _LocationSelectorState extends State<LocationSelector> {
           ),
       ],
     );
-  }
-
-  void _getSuggestions(String value) {
-    _getPredictions(value);
   }
 }
