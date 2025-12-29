@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:math';
-import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -374,10 +372,12 @@ class _RecentRideTileState extends State<RecentRideTile> {
 
     if (cachedAddress != null) {
       final parts = cachedAddress.split('|');
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _dropoffAddressMain = parts[0];
         _dropoffAddressSecondary = parts.length > 1 ? parts[1] : '';
       });
+      }
       return;
     }
 

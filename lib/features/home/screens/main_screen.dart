@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucky_parcel/common/widgets/side_bar.dart';
 import 'package:lucky_parcel/common/widgets/top_nav.dart';
 import 'package:lucky_parcel/features/home/screens/welcome_screen.dart';
-import 'package:lucky_parcel/features/home/widgets/bottom_nav.dart';
+import 'package:lucky_parcel/features/home/widgets/bottom_nav_option_2.dart';
 import 'package:lucky_parcel/features/orders/screens/orders_screen.dart';
 import 'package:lucky_parcel/features/profile/screens/profile_screen.dart';
 import 'package:lucky_parcel/features/rewards/screens/points_screen.dart';
@@ -52,7 +52,7 @@ class _MainScreenState extends State<MainScreen> {
       appBar: TopNav(scaffoldKey: _scaffoldKey),
       drawer: SideBar(onMenuItemTapped: _onMenuItemTapped),
       body: _widgetOptions.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNav(selectedIndex: _selectedIndex, onItemTapped: _onItemTapped),
+      bottomNavigationBar: BottomNavOption2(selectedIndex: _selectedIndex, onItemTapped: _onItemTapped),
     );
   }
 }
