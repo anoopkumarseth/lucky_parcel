@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:lucky_parcel/common/constants/api_keys.dart';
 import 'package:uuid/uuid.dart';
 
 class LocationSelector extends StatefulWidget {
@@ -14,7 +15,6 @@ class LocationSelector extends StatefulWidget {
 }
 
 class _LocationSelectorState extends State<LocationSelector> {
-  final String _apiKey = 'AIzaSyCKVcmoBtJMFWHBRDF_TxvB5UCmW-w5rOg';
   final _pickupController = TextEditingController();
   final _dropController = TextEditingController();
   final String _sessionToken = const Uuid().v4();
@@ -28,7 +28,7 @@ class _LocationSelectorState extends State<LocationSelector> {
     }
 
     final uri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$_apiKey&sessiontoken=$_sessionToken&components=country:in');
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${ApiKeys.googleApiKey}&sessiontoken=$_sessionToken&components=country:in');
 
     try {
       final response = await http.get(uri);
@@ -86,7 +86,7 @@ class _LocationSelectorState extends State<LocationSelector> {
       }
 
       final position = await Geolocator.getCurrentPosition();
-      final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$_apiKey');
+      final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=${ApiKeys.googleApiKey}');
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {

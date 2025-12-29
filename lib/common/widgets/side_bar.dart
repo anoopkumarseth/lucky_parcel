@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lucky_parcel/app/routes/app_router.dart';
 
 class SideBar extends StatelessWidget {
-  const SideBar({super.key});
+  final Function(int) onMenuItemTapped;
+
+  const SideBar({super.key, required this.onMenuItemTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +27,17 @@ class SideBar extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('Profile'),
-            onTap: () => Navigator.pushNamed(context, AppRouter.profile),
+            onTap: () => onMenuItemTapped(4),
           ),
           ListTile(
             leading: const Icon(Icons.receipt_long_outlined),
             title: const Text('My Orders'),
-            onTap: () => Navigator.pushNamed(context, AppRouter.orders),
+            onTap: () => onMenuItemTapped(1),
           ),
           ListTile(
             leading: const Icon(Icons.star_border),
             title: const Text('My Points'),
-            onTap: () => Navigator.pushNamed(context, AppRouter.points),
+            onTap: () => onMenuItemTapped(3),
           ),
           if (user != null && user.email == 'test@gmail.com')
             ListTile(

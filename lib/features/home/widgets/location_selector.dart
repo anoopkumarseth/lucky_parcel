@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:lucky_parcel/common/constants/api_keys.dart';
 import 'package:lucky_parcel/common/widgets/custom_text_field.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -16,7 +17,6 @@ class LocationSelector extends StatefulWidget {
 }
 
 class _LocationSelectorState extends State<LocationSelector> {
-  final String _apiKey = 'AIzaSyCKVcmoBtJMFWHBRDF_TxvB5UCmW-w5rOg';
   final _pickupController = TextEditingController();
   final _dropController = TextEditingController();
   final String _sessionToken = const Uuid().v4();
@@ -30,7 +30,7 @@ class _LocationSelectorState extends State<LocationSelector> {
     }
 
     final uri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$_apiKey&sessiontoken=$_sessionToken&components=country:in');
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${ApiKeys.googleApiKey}&sessiontoken=$_sessionToken&components=country:in');
 
     try {
       final response = await http.get(uri);
@@ -88,7 +88,7 @@ class _LocationSelectorState extends State<LocationSelector> {
       }
 
       final position = await Geolocator.getCurrentPosition();
-      final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$_apiKey');
+      final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=${ApiKeys.googleApiKey}');
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
@@ -111,55 +111,58 @@ class _LocationSelectorState extends State<LocationSelector> {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
 
-    return Column(
-      children: [
-        CustomTextField(
-          controller: _pickupController,
-          labelText: 'Pickup Location',
-          prefixIcon: SvgPicture.asset('assets/icons/location-pin.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
-          suffixIcon: IconButton(
-            icon: SvgPicture.asset('assets/icons/location-select.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
-            onPressed: _getCurrentLocation,
-          ),
-          onChanged: (value) {
-            _isPickup = true;
-            _getPredictions(value);
-          },
-        ),
-        CustomTextField(
-          controller: _dropController,
-          labelText: 'Drop Location',
-          prefixIcon: SvgPicture.asset('assets/icons/location-pin.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
-          onChanged: (value) {
-            _isPickup = false;
-            _getPredictions(value);
-          },
-        ),
-        if (_predictions.isNotEmpty)
-          SizedBox(
-            height: 200,
-            child: ListView.builder(
-              itemCount: _predictions.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(_predictions[index]['description']),
-                  onTap: () {
-                    if (_isPickup) {
-                      _pickupController.text = _predictions[index]['description'];
-                    } else {
-                      _dropController.text = _predictions[index]['description'];
-                    }
-                    widget.onLocationSelected({
-                      'isPickup': _isPickup,
-                      'place_id': _predictions[index]['place_id']
-                    });
-                    setState(() => _predictions = []);
-                  },
-                );
-              },
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      child: Column(
+        children: [
+          CustomTextField(
+            controller: _pickupController,
+            labelText: 'Pickup Location',
+            prefixIcon: SvgPicture.asset('assets/icons/location-pin.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
+            suffixIcon: IconButton(
+              icon: SvgPicture.asset('assets/icons/location-select.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
+              onPressed: _getCurrentLocation,
             ),
+            onChanged: (value) {
+              _isPickup = true;
+              _getPredictions(value);
+            },
           ),
-      ],
+          CustomTextField(
+            controller: _dropController,
+            labelText: 'Drop Location',
+            prefixIcon: SvgPicture.asset('assets/icons/location-pin.svg', colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn)),
+            onChanged: (value) {
+              _isPickup = false;
+              _getPredictions(value);
+            },
+          ),
+          if (_predictions.isNotEmpty)
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                itemCount: _predictions.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(_predictions[index]['description']),
+                    onTap: () {
+                      if (_isPickup) {
+                        _pickupController.text = _predictions[index]['description'];
+                      } else {
+                        _dropController.text = _predictions[index]['description'];
+                      }
+                      widget.onLocationSelected({
+                        'isPickup': _isPickup,
+                        'place_id': _predictions[index]['place_id']
+                      });
+                      setState(() => _predictions = []);
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
